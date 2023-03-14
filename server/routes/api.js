@@ -5,30 +5,35 @@ const router = express.Router()
 const Expense = require('../models/Expense')
 
 router.get('/expenses', function(req, res) {
-    const d1 = moment(req.query.d1).format('LLLL')
-    const d2 = moment(req.query.d2).format('LLLL')
-    const filtiringExpensesByDate = []
-    Expense.find({}).sort({ date: -1 }).then(function(expenses) {
-        if (d1 && d2) {
-            for (const expense of expenses) {
-                if (expense.date >= d1 && expense.date <= d2) {
-                    filtiringExpensesByDate.push(expense)
-                }
-            }
-            res.send(filtiringExpensesByDate)
-        } else if (d1 || d2) {
-            const d = d1 ? d1 : d2
-            for (const expense of expenses) {
-                if (expense.date >= d) {
-                    filtiringExpensesByDate.push(expense)
-                }
-            }
-            res.send(filtiringExpensesByDate)
-        } else {
-            res.send(expenses)
-        }
-    })
-
+    const date1 = req.query.d1
+    const date2 = req.query.d2
+    if (date1 && date2) {
+        const date1Format = moment(date1).format('LLLL')
+        const date2Format = moment(date2).format('LLLL')
+        Expense.find({
+                $and: [
+                    { date: { $gt: date1Format } },
+                    { date: { $lt: date2Format } }
+                ]
+            }).sort({ date: -1 })
+            .then(function(expenses) {
+                res.send(expenses)
+            })
+    } else if (date1 || date2) {
+        const date = date1 ? date1 : date2
+        const dateFormat = moment(date).format('LLLL')
+        Expense.find({
+                date: { $gt: dateFormat }
+            }).sort({ date: -1 })
+            .then(function(expenses) {
+                res.send(expenses)
+            })
+    } else {
+        Expense.find({}).sort({ date: -1 })
+            .then(function(expenses) {
+                res.send(expenses)
+            })
+    }
 })
 
 router.get('/expenses/:group', function(req, res) {
@@ -55,13 +60,13 @@ router.get('/expenses/:group', function(req, res) {
 })
 
 router.post('/expense', function(req, res) {
-    let e = new Expense(req.body)
+    let exponse = new Expense(req.body)
     let date = req.body.date ? moment(req.body.date).format('LLLL') : moment().format('LLLL')
-    e.date = date
-    e.save().then(function() {
-        console.log(`the amount of the expense: ${e.amount} and i spent my money on ${e.item}`);
+    exponse.date = date
+    exponse.save().then(function() {
+        console.log(`the amount of the expense: ${exponse.amount} and i spent my money on ${exponse.item}`);
     })
-    res.status(201).send(e)
+    res.status(201).send(exponse)
 })
 
 router.put('/update/:group1/:group2', function(req, res) {
@@ -73,13 +78,5 @@ router.put('/update/:group1/:group2', function(req, res) {
         })
         .catch(err => console.log(err))
 })
-
-// router.delete('/apocalypse', function(req, res) {
-//     Person.deleteMany({})
-//         .then(function(person) {
-//             res.status(204).send("all persons removed")
-//         })
-//         .catch(err => console.log(err))
-// })
 
 module.exports = router
